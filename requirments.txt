@@ -1,4 +1,3 @@
 scapy
 requests
-traceback
 python-nmap
